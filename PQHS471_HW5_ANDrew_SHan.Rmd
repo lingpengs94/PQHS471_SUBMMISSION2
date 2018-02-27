@@ -1,0 +1,148 @@
+---
+title: "PQHS471_HW5_ANDREWSHAN"
+author: "Andrew Shan"
+date: "2/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE, background = FALSE)
+```
+# Question 9
+
+```{r}
+library(ISLR)
+dim(College)
+names(College)
+```
+
+##  a training set and a test set
+
+```{r}
+train = sample(1:dim(College)[1], dim(College)[1] / 2)
+test <- -train
+College.train <- College[train, ]
+College.test <- College[test, ]
+```
+
+
+## test error obtained using least squares
+```{r}
+fit.lm <- lm(Apps ~ ., data = College.train)
+pred.lm <- predict(fit.lm, College.test)
+mean((pred.lm - College.test$Apps)^2)
+```
+
+The test MSE is 1480283.
+
+## test error obtained using ridge regression
+
+```{r}
+library(glmnet)
+train.mat <- model.matrix(Apps ~ ., data = College.train)
+test.mat <- model.matrix(Apps ~ ., data = College.test)
+grid <- 10 ^ seq(4, -2, length = 100)
+fit.ridge <- glmnet(train.mat, College.train$Apps, alpha = 0, lambda = grid, thresh = 1e-12)
+cv.ridge <- cv.glmnet(train.mat, College.train$Apps, alpha = 0, lambda = grid, thresh = 1e-12)
+bestlam.ridge <- cv.ridge$lambda.min
+bestlam.ridge
+pred.ridge <- predict(fit.ridge, s = bestlam.ridge, newx = test.mat)
+mean((pred.ridge - College.test$Apps)^2)
+```
+
+The test MSE is 1582942, which is higher than the least squares. 
+
+## test error obtained using lasso regression
+
+```{r}
+fit.lasso <- glmnet(train.mat, College.train$Apps, alpha = 1, lambda = grid, thresh = 1e-12)
+cv.lasso <- cv.glmnet(train.mat, College.train$Apps, alpha = 1, lambda = grid, thresh = 1e-12)
+bestlam.lasso <- cv.lasso$lambda.min
+bestlam.lasso
+pred.lasso <- predict(fit.lasso, s = bestlam.lasso, newx = test.mat)
+mean((pred.lasso - College.test$Apps)^2)
+```
+
+The test MSE is 1628772, which is higher than the least squares. 
+```{r}
+predict(fit.lasso, s = bestlam.lasso, type = "coefficients")
+```
+
+There are 13 non-zero coefficient estimates.
+
+## PCR model
+
+```{r}
+library(pls)
+fit.pcr <- pcr(Apps ~ ., data = College.train, scale = TRUE, validation = "CV")
+validationplot(fit.pcr, val.type = "MSEP")
+pred.pcr <- predict(fit.pcr, College.test, ncomp = 10)
+mean((pred.pcr - College.test$Apps)^2)
+```
+
+As the plots show, value of $M$ selected by cross-validation is 10 and test MSE is 3171537, which is higher than the least squares.
+
+##  PLS model
+
+```{r}
+fit.pls <- plsr(Apps ~ ., data = College.train, scale = TRUE, validation = "CV")
+validationplot(fit.pls, val.type = "MSEP")
+pred.pls <- predict(fit.pls, College.test, ncomp = 10)
+mean((pred.pls - College.test$Apps)^2)
+```
+
+As the plots show, value of $M$ selected by cross-validation is 10 and test MSE is 1484572, which is lower than the least squares.
+
+## Comments on Results obtained
+
+```{r}
+summary(fit.pls)
+```
+
+
+# Question 11
+
+
+```{r}
+library(MASS)
+dim(Boston)
+```
+
+## lasso
+
+```{r}
+x <- model.matrix(crim ~ ., Boston)[, -1]
+y <- Boston$crim
+cv.out <- cv.glmnet(x, y, alpha = 1, type.measure = "mse")
+with(cv.out, lambda.min == lambda[which.min(cvm)])
+plot(cv.out)
+minidx = with(cv.out, which(lambda == lambda.min)) 
+with(cv.out, abline(h = cvm[minidx] + cvsd[minidx], lty=2))
+cv.out$cvm[cv.out$lambda == cv.out$lambda.min]
+```
+
+The lasso model selects $M$ to be equal to 13 and MSE equals 42.67087.
+## ridge
+
+```{r}
+cv.out <- cv.glmnet(x, y, alpha = 0, type.measure = "mse")
+plot(cv.out)
+cv.out$cvm[cv.out$lambda == cv.out$lambda.min]
+```
+
+The lasso model selects $M$ to be equal to 13 and MSE equals 43.29463.
+## PCR
+
+```{r}
+pcr.fit <- pcr(crim ~ ., data = Boston, scale = TRUE, validation = "CV")
+summary(pcr.fit)
+validationplot(pcr.fit, val.type = "MSEP")
+```
+```{r}
+MSEP(pcr.fit)$val[13]
+```
+
+The cross-validation selects $M$ to be equal to 13 and MSE equals 46.45246.
+
+B. The lasso models returns smallest MSE based on the cross-validation. 
+All the models includes 13 predictors so they do include all features in the data set.
