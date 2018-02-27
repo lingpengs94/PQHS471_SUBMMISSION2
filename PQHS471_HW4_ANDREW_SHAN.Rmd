@@ -1,0 +1,99 @@
+---
+title: "PQHS471_AndrewShan_Hw4"
+author: "Andrew Shan"
+date: "2/26/2018"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+```{r}
+library(MASS)
+attach(Boston)
+```
+```{r}
+dim(Boston)
+names(Boston)
+```
+
+# Estimate $\hat{\mu}$
+```{r}
+mu.hat <- mean(medv)
+mu.hat
+```
+
+# Estimate of the standard error of $\hat{\mu}$
+
+```{r}
+se.hat<- sd(medv)/ sqrt(dim(Boston)[1])
+se.hat
+```
+
+
+# Bootstrap estimate of standard error 
+```{r}
+library(boot)
+set.seed(471)
+boot.fn<-function(data,index){
+  mu <- mean(data[index])
+  return(mu)
+}
+boot(Boston$medv, boot.fn, 10000)
+```
+
+The bootstrap returns the standard error of $\hat{\mu}$, 0.4046, which is very close to 0.4089.
+
+# 95% confidence interval
+
+```{r}
+t.test(Boston$medv)
+```
+```{r}
+CI <- c(22.53281- 2*0.4046056, 22.53281+ 2*0.4046056)
+CI
+```
+
+Boostrap 95% confidence interval is very close to t.test confidence interval.
+
+# Estimate median of $\hat{\mu}$
+
+```{r}
+med.hat <- median(Boston$medv)
+med.hat
+```
+
+# Estimate standard error of $\hat{\mu}$
+
+```{r}
+set.seed(471)
+median.fn<-function(data,index){
+  mu <- median(data[index])
+  return(mu)
+}
+boot(Boston$medv, median.fn, 10000)
+```
+
+The bootstrap returns a same median 21.2 but a smaller standard error compared to mean standard error. 
+
+# Tenth percentile of medv
+
+```{r}
+quantity <- quantile(Boston$medv, 0.1)
+quantity
+```
+
+
+# bootstrap to estimate the standard error
+```{r}
+set.seed(471)
+quantity.fn<-function(data,index){
+  mu <- quantile(data[index],0.1)
+  return(mu)
+}
+boot(Boston$medv, quantity.fn, 10000)
+```
+
+The boostrap returns same result of 10th percentile and a small standard error of 0.5026.
